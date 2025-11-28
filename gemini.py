@@ -1792,28 +1792,25 @@ def get_image_base_url(fallback_host_url: str) -> str:
 
 def build_openai_response_content(chat_response: ChatResponse, host_url: str) -> str:
     """构建OpenAI格式的响应内容
-    
-    返回纯文本，如果有图片则将图片URL追加到文本末尾
+
+    如果有图片，只返回图片URL（不包含文本）
+    如果没有图片，返回纯文本
     """
-    result_text = chat_response.text
-    
-    # 如果有图片，将图片URL追加到文本中
+    # 如果有图片，只返回图片URL
     if chat_response.images:
         base_url = get_image_base_url(host_url)
         image_urls = []
-        
+
         for img in chat_response.images:
             if img.file_name:
                 image_url = f"{base_url}image/{img.file_name}"
                 image_urls.append(image_url)
-        
+
         if image_urls:
-            # 在文本末尾添加图片URL
-            if result_text:
-                result_text += "\n\n"
-            result_text += "\n".join(image_urls)
-    
-    return result_text
+            return "\n".join(image_urls)
+
+    # 没有图片，返回文本
+    return chat_response.text
 
 
 # ==================== 图片服务接口 ====================
