@@ -1866,11 +1866,8 @@ def get_accounts():
     return jsonify({"accounts": accounts_data})
 
 
-@app.route('/api/accounts', methods=['POST'])
-@require_admin
-def add_account():
-    """添加账号"""
-    data = request.json
+def _add_account_impl(data):
+    """添加账号的核心逻辑（供多个接口复用）"""
     # 去重：基于 csesidx 或 team_id 检查
     new_csesidx = data.get("csesidx", "")
     new_team_id = data.get("team_id", "")
@@ -1888,7 +1885,7 @@ def add_account():
         "user_agent": data.get("user_agent", "Mozilla/5.0"),
         "available": True
     }
-    
+
     account_manager.accounts.append(new_account)
     idx = len(account_manager.accounts) - 1
     account_manager.account_states[idx] = {
@@ -1901,8 +1898,22 @@ def add_account():
     }
     account_manager.config["accounts"] = account_manager.accounts
     account_manager.save_config()
-    
+
     return jsonify({"success": True, "id": idx})
+
+
+@app.route('/api/accounts', methods=['POST'])
+@require_admin
+def add_account():
+    """添加账号（管理员权限）"""
+    return _add_account_impl(request.json)
+
+
+@app.route('/api/accounts_save', methods=['POST'])
+@require_api_auth
+def add_account_api():
+    """添加账号（API Token 权限）"""
+    return _add_account_impl(request.json)
 
 
 @app.route('/api/accounts/<int:account_id>', methods=['PUT'])
