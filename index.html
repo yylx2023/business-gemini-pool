@@ -672,6 +672,7 @@
                             <tr>
                                 <th>序号</th>
                                 <th>Team ID</th>
+                                <th>Email</th>
                                 <th>User Agent</th>
                                 <th>状态</th>
                                 <th>操作</th>
@@ -849,6 +850,10 @@
                     <label class="form-label" for="newUserAgent">User Agent</label>
                     <input type="text" class="form-input" id="newUserAgent" placeholder="输入User Agent">
                 </div>
+                <div class="form-group">
+                    <label class="form-label" for="newEmail">Email（可选）</label>
+                    <input type="email" class="form-input" id="newEmail" placeholder="输入邮箱地址">
+                </div>
             </div>
             <div class="modal-footer">
                 <button class="btn btn-outline" onclick="closeModal('addAccountModal')">取消</button>
@@ -884,6 +889,10 @@
                 <div class="form-group">
                     <label class="form-label" for="editUserAgent">User Agent</label>
                     <input type="text" class="form-input" id="editUserAgent" placeholder="输入User Agent">
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="editEmail">Email（可选）</label>
+                    <input type="email" class="form-input" id="editEmail" placeholder="输入邮箱地址">
                 </div>
             </div>
             <div class="modal-footer">
@@ -1179,7 +1188,7 @@
             if (!tbody) return;
 
             if (accountsData.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="empty-state">
+                tbody.innerHTML = `<tr><td colspan="6" class="empty-state">
                     <div class="empty-state-icon"><svg class="icon"><use xlink:href="#icon-users"></use></svg></div>
                     <h3>暂无账号</h3><p>点击 "添加账号" 按钮来创建一个。</p>
                 </td></tr>`;
@@ -1190,6 +1199,7 @@
                 <tr>
                     <td>${index + 1}</td>
                     <td><code>${acc.team_id || '-'}</code></td>
+                    <td>${acc.email || '-'}</td>
                     <td title="${acc.user_agent}">${acc.user_agent ? acc.user_agent.substring(0, 30) + '...' : '-'}</td>
                     <td>
                         <span class="badge ${acc.available ? 'badge-success' : 'badge-danger'}">${acc.available ? '可用' : '不可用'}</span>
@@ -1232,32 +1242,35 @@
         function showEditAccountModal(id) {
             const acc = accountsData.find(a => a.id === id);
             if (!acc) return;
-            
+
             document.getElementById('editAccountId').value = id;
             document.getElementById('editTeamId').value = acc.team_id || '';
             document.getElementById('editSecureCses').value = acc.secure_c_ses || '';
             document.getElementById('editHostCoses').value = acc.host_c_oses || '';
             document.getElementById('editCsesidx').value = acc.csesidx || '';
             document.getElementById('editUserAgent').value = acc.user_agent ? acc.user_agent.replace('...', '') : '';
-            
+            document.getElementById('editEmail').value = acc.email || '';
+
             openModal('editAccountModal');
         }
 
         async function updateAccount() {
             const id = document.getElementById('editAccountId').value;
             const account = {};
-            
+
             const teamId = document.getElementById('editTeamId').value;
             const secureCses = document.getElementById('editSecureCses').value;
             const hostCoses = document.getElementById('editHostCoses').value;
             const csesidx = document.getElementById('editCsesidx').value;
             const userAgent = document.getElementById('editUserAgent').value;
-            
+            const email = document.getElementById('editEmail').value;
+
             if (teamId) account.team_id = teamId;
             if (secureCses) account.secure_c_ses = secureCses;
             if (hostCoses) account.host_c_oses = hostCoses;
             if (csesidx) account.csesidx = csesidx;
             if (userAgent) account.user_agent = userAgent;
+            account.email = email;
             
             try {
                 const res = await apiFetch(`${API_BASE}/api/accounts/${id}`, {
@@ -1285,17 +1298,19 @@
             const hostCoses = document.getElementById('newHostCoses').value;
             const csesidx = document.getElementById('newCsesidx').value;
             const userAgent = document.getElementById('newUserAgent').value;
+            const email = document.getElementById('newEmail').value;
 
             try {
                 const res = await apiFetch(`${API_BASE}/api/accounts`, {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        team_id: teamId, 
-                        "secure_c_ses": secureCses, 
-                        "host_c_oses": hostCoses, 
-                        "csesidx": csesidx, 
-                        "user_agent": userAgent })
+                    body: JSON.stringify({
+                        team_id: teamId,
+                        "secure_c_ses": secureCses,
+                        "host_c_oses": hostCoses,
+                        "csesidx": csesidx,
+                        "user_agent": userAgent,
+                        "email": email })
                 });
                 const data = await res.json();
                 if (!res.ok || data.error) throw new Error(data.error || data.detail || '添加失败');
@@ -1329,6 +1344,7 @@
             document.getElementById('newHostCoses').value = acc.host_c_oses || '';
             document.getElementById('newCsesidx').value = acc.csesidx || '';
             document.getElementById('newUserAgent').value = acc.user_agent || '';
+            document.getElementById('newEmail').value = acc.email || '';
             showToast('已填充账号信息', 'success');
         }
 

@@ -1857,6 +1857,7 @@ def get_accounts():
             "host_c_oses": acc.get("host_c_oses", ""),
             "csesidx": acc.get("csesidx", ""),
             "user_agent": acc.get("user_agent", ""),
+            "email": acc.get("email", ""),
             "available": effective_available,
             "unavailable_reason": acc.get("unavailable_reason", ""),
             "cooldown_until": cooldown_until if cooldown_active else None,
@@ -1883,6 +1884,7 @@ def _add_account_impl(data):
         "host_c_oses": data.get("host_c_oses", ""),
         "csesidx": data.get("csesidx", ""),
         "user_agent": data.get("user_agent", "Mozilla/5.0"),
+        "email": data.get("email", ""),
         "available": True
     }
 
@@ -1936,6 +1938,8 @@ def update_account(account_id):
         acc["csesidx"] = data["csesidx"]
     if "user_agent" in data:
         acc["user_agent"] = data["user_agent"]
+    if "email" in data:
+        acc["email"] = data["email"]
     
     # 同步更新config中的accounts
     account_manager.config["accounts"] = account_manager.accounts
