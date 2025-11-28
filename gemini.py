@@ -1083,6 +1083,9 @@ def stream_chat_with_images(jwt: str, sess_name: str, message: str,
             "filter": "",
             "fileIds": request_file_ids,
             "answerGenerationMode": "NORMAL",
+            "assistGenerationConfig":{
+                "modelId":"gemini-3-pro-preview"
+            },
             "toolsSpec": {
                 "webGroundingSpec": {},
                 "toolRegistry": "default_tool_registry",

@@ -180,13 +180,15 @@ Web 管理控制台前端，单文件 HTML 应用。
 - Flask
 - requests
 
-### 安装依赖
+### 方式一：直接运行
+
+#### 安装依赖
 
 ```bash
-pip install flask requests
+pip install flask requests flask-cors
 ```
 
-### 配置账号
+#### 配置账号
 
 编辑 `business_gemini_session.json` 文件，添加你的 Gemini 账号信息：
 
@@ -207,7 +209,7 @@ pip install flask requests
 }
 ```
 
-### 启动服务
+#### 启动服务
 
 ```bash
 python gemini.py
@@ -215,9 +217,20 @@ python gemini.py
 
 服务将在 `http://127.0.0.1:8000` 启动。
 
+### 方式二：使用 docker-compose 启动服务
+
+在项目目录下手动创建 business_gemini_session.json 后
+
+使用命令启动：
+
+```bash
+docker-compose up -d
+```
+
 ### 访问管理控制台
 
-打开浏览器访问 `http://127.0.0.1:8000/` 即可进入 Web 管理控制台。
+- 直接运行：`http://127.0.0.1:8000/`
+- Docker 部署：`http://127.0.0.1:8000/`
 
 ## API 使用示例
 
