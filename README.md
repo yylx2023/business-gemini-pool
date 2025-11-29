@@ -112,6 +112,7 @@ curl --location --request POST 'http://127.0.0.1:8000/v1/chat/completions' \
 ```json
 {
     "proxy": "http://127.0.0.1:7890",
+    "proxy_enabled": false,
     "accounts": [
         {
             "team_id": "团队ID",
@@ -140,6 +141,7 @@ curl --location --request POST 'http://127.0.0.1:8000/v1/chat/completions' \
 | 字段 | 类型 | 说明 |
 |------|------|------|
 | `proxy` | string | HTTP 代理地址 |
+| `proxy_enabled` | boolean | 代理开关，`true` 启用代理，`false` 禁用代理（默认 `false`） |
 | `accounts` | array | 账号列表 |
 | `accounts[].team_id` | string | Google Cloud 团队 ID |
 | `accounts[].secure_c_ses` | string | 安全会话 Cookie |
@@ -195,6 +197,7 @@ pip install flask requests flask-cors
 ```json
 {
     "proxy": "http://your-proxy:port",
+    "proxy_enabled": true,
     "accounts": [
         {
             "team_id": "your-team-id",

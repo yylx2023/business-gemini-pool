@@ -494,6 +494,19 @@ def check_proxy(proxy: str) -> bool:
         return False
 
 
+def get_proxy() -> Optional[str]:
+    """获取代理配置，根据proxy_enabled开关决定是否返回代理地址
+    
+    Returns:
+        代理地址字符串，如果禁用代理则返回None
+    """
+    if account_manager.config is None:
+        return None
+    if not account_manager.config.get("proxy_enabled", False):
+        return None
+    return account_manager.config.get("proxy")
+
+
 def url_safe_b64encode(data: bytes) -> str:
     """URL安全的Base64编码，不带padding"""
     return base64.urlsafe_b64encode(data).decode('utf-8').rstrip('=')
@@ -636,7 +649,7 @@ def ensure_jwt_for_account(account_idx: int, account: dict):
         print(f"[DEBUG][ensure_jwt_for_account] JWT状态 - 存在: {state['jwt'] is not None}, 年龄: {jwt_age:.2f}秒")
         if state["jwt"] is None or jwt_age > 240:
             print(f"[DEBUG][ensure_jwt_for_account] 需要刷新JWT...")
-            proxy = account_manager.config.get("proxy")
+            proxy = get_proxy()
             try:
                 refresh_start = time.time()
                 state["jwt"] = get_jwt_for_account(account, proxy)
@@ -709,7 +722,7 @@ def ensure_session_for_account(account_idx: int, account: dict):
         print(f"[DEBUG][ensure_session_for_account] 当前session状态: {state['session'] is not None}")
         if state["session"] is None:
             print(f"[DEBUG][ensure_session_for_account] 需要创建新session...")
-            proxy = account_manager.config.get("proxy")
+            proxy = get_proxy()
             team_id = account.get("team_id")
             session_start = time.time()
             state["session"] = create_chat_session(jwt, team_id, proxy)
@@ -1389,7 +1402,7 @@ def upload_file():
                 session, jwt, team_id = ensure_session_for_account(account_idx, account)
                 print(f"[文件上传] 步骤3.{retry_idx+1}.2完成: session={session}, team_id={team_id}, 耗时={time.time()-step_start:.3f}秒")
                 
-                proxy = account_manager.config.get("proxy")
+                proxy = get_proxy()
                 print(f"[文件上传] 代理设置: {proxy}")
                 
                 # 上传文件到 Gemini
@@ -1629,7 +1642,7 @@ def chat_completions():
             account_idx = specified_account_id
             try:
                 session, jwt, team_id = ensure_session_for_account(account_idx, account)
-                proxy = account_manager.config.get("proxy")
+                proxy = get_proxy()
                 
                 for img in input_images:
                     uploaded_file_id = upload_inline_image_to_gemini(jwt, session, team_id, img, proxy)
@@ -1661,7 +1674,7 @@ def chat_completions():
                 try:
                     account_idx, account = account_manager.get_next_account()
                     session, jwt, team_id = ensure_session_for_account(account_idx, account)
-                    proxy = account_manager.config.get("proxy")
+                    proxy = get_proxy()
                     
                     # 上传内联图片获取 fileId
                     for img in input_images:
@@ -1851,7 +1864,9 @@ def health_check():
 def system_status():
     """获取系统状态"""
     total, available = account_manager.get_account_count()
-    proxy = account_manager.config.get("proxy")
+    proxy_url = account_manager.config.get("proxy")
+    proxy_enabled = account_manager.config.get("proxy_enabled", False)
+    effective_proxy = get_proxy()  # 实际使用的代理（考虑开关状态）
     
     return jsonify({
         "status": "ok",
@@ -1861,8 +1876,10 @@ def system_status():
             "available": available
         },
         "proxy": {
-            "url": proxy,
-            "available": check_proxy(proxy) if proxy else False
+            "url": proxy_url,
+            "enabled": proxy_enabled,
+            "effective": effective_proxy,  # 实际生效的代理地址
+            "available": check_proxy(effective_proxy) if effective_proxy else False
         },
         "models": account_manager.config.get("models", [])
     })

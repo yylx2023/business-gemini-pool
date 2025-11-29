@@ -1011,7 +1011,7 @@
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label" for="editModelId">模型ID</label>
-                        <input type="text" class="form-input" id="editModelId" placeholder="如: gemini-pro">
+                        <input type="text" class="form-input" id="editModelId" placeholder="如: gemini-pro" readonly style="background-color: var(--bg-tertiary); cursor: not-allowed;">
                     </div>
                     <div class="form-group">
                         <label class="form-label" for="editModelName">模型名称</label>
@@ -1590,26 +1590,27 @@
             const model = modelsData.find(m => m.id === id);
             if (!model) return;
             
+            document.getElementById('editModelOriginalId').value = id;
             document.getElementById('editModelId').value = id;
             document.getElementById('editModelName').value = model.name || '';
-            document.getElementById('editModelDisplayName').value = model.display_name || '';
-            document.getElementById('editModelMaxTokens').value = model.max_tokens || '';
-            document.getElementById('editModelEnabled').checked = model.enabled !== false;
+            document.getElementById('editModelDesc').value = model.description || '';
+            document.getElementById('editContextLength').value = model.context_length || '';
+            document.getElementById('editMaxTokens').value = model.max_tokens || '';
             
             openModal('editModelModal');
         }
 
         async function updateModel() {
-            const id = document.getElementById('editModelId').value;
+            const originalId = document.getElementById('editModelOriginalId').value;
             const model = {
                 name: document.getElementById('editModelName').value,
-                display_name: document.getElementById('editModelDisplayName').value,
-                max_tokens: parseInt(document.getElementById('editModelMaxTokens').value) || 8096,
-                enabled: document.getElementById('editModelEnabled').checked
+                description: document.getElementById('editModelDesc').value,
+                context_length: parseInt(document.getElementById('editContextLength').value) || 32000,
+                max_tokens: parseInt(document.getElementById('editMaxTokens').value) || 8096
             };
             
             try {
-                const res = await apiFetch(`${API_BASE}/api/models/${id}`, {
+                const res = await apiFetch(`${API_BASE}/api/models/${originalId}`, {
                     method: 'PUT',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify(model)
@@ -1628,7 +1629,86 @@
             }
         }
 
-        // ... (其他模型相关的JS函数，如 saveNewModel, showEditModelModal, deleteModel)
+        /**
+         * 保存新模型
+         * 从添加模型模态框获取数据并调用API创建新模型
+         */
+        async function saveNewModel() {
+            const modelId = document.getElementById('newModelId').value.trim();
+            const modelName = document.getElementById('newModelName').value.trim();
+            const modelDesc = document.getElementById('newModelDesc').value.trim();
+            const contextLength = parseInt(document.getElementById('newContextLength').value) || 32000;
+            const maxTokens = parseInt(document.getElementById('newMaxTokens').value) || 8096;
+
+            // 验证必填字段
+            if (!modelId) {
+                showToast('请输入模型ID', 'warning');
+                return;
+            }
+            if (!modelName) {
+                showToast('请输入模型名称', 'warning');
+                return;
+            }
+
+            const model = {
+                id: modelId,
+                name: modelName,
+                description: modelDesc,
+                context_length: contextLength,
+                max_tokens: maxTokens
+            };
+
+            try {
+                const res = await apiFetch(`${API_BASE}/api/models`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(model)
+                });
+                const data = await res.json();
+                
+                if (res.ok && (data.success || !data.error)) {
+                    showToast('模型添加成功', 'success');
+                    closeModal('addModelModal');
+                    // 清空表单
+                    document.getElementById('newModelId').value = '';
+                    document.getElementById('newModelName').value = '';
+                    document.getElementById('newModelDesc').value = '';
+                    document.getElementById('newContextLength').value = '';
+                    document.getElementById('newMaxTokens').value = '';
+                    loadModels();
+                } else {
+                    throw new Error(data.error || '添加失败');
+                }
+            } catch (e) {
+                showToast('添加模型失败: ' + e.message, 'error');
+            }
+        }
+
+        /**
+         * 删除模型
+         * @param {string} id - 模型ID
+         */
+        async function deleteModel(id) {
+            if (!confirm(`确定要删除模型 "${id}" 吗？此操作不可恢复。`)) {
+                return;
+            }
+
+            try {
+                const res = await apiFetch(`${API_BASE}/api/models/${id}`, {
+                    method: 'DELETE'
+                });
+                const data = await res.json();
+                
+                if (res.ok && (data.success || !data.error)) {
+                    showToast('模型删除成功', 'success');
+                    loadModels();
+                } else {
+                    throw new Error(data.error || '删除失败');
+                }
+            } catch (e) {
+                showToast('删除模型失败: ' + e.message, 'error');
+            }
+        }
         
         // --- 系统设置 (Settings) ---
         async function loadConfig() {
@@ -1876,7 +1956,7 @@
             reader.onload = async (e) => {
                 try {
                     const newConfig = JSON.parse(e.target.result);
-                    const res = await apiFetch(`${API_BASE}/api/config/upload`, {
+                    const res = await apiFetch(`${API_BASE}/api/config/import`, {
                         method: 'POST',
                         headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify(newConfig)
