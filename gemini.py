@@ -1912,40 +1912,78 @@ def get_accounts():
 
 
 def _add_account_impl(data):
-    """添加账号的核心逻辑（供多个接口复用）"""
-    # 去重：基于 csesidx 或 team_id 检查
-    new_csesidx = data.get("csesidx", "")
+    """添加或更新账号的核心逻辑（供多个接口复用）
+
+    - 如果 team_id 已存在，则更新该账号的数据（csesidx 等可能会变）
+    - 如果 team_id 不存在，则新增账号
+    """
     new_team_id = data.get("team_id", "")
-    for acc in account_manager.accounts:
-        if new_csesidx and acc.get("csesidx") == new_csesidx:
-            return jsonify({"error": "账号已存在（同 csesidx）"}), 400
-        if new_team_id and acc.get("team_id") == new_team_id and new_csesidx == acc.get("csesidx"):
-            return jsonify({"error": "账号已存在（同 team_id + csesidx）"}), 400
 
-    new_account = {
-        "team_id": data.get("team_id", ""),
-        "secure_c_ses": data.get("secure_c_ses", ""),
-        "host_c_oses": data.get("host_c_oses", ""),
-        "csesidx": data.get("csesidx", ""),
-        "user_agent": data.get("user_agent", "Mozilla/5.0"),
-        "email": data.get("email", ""),
-        "available": True
-    }
+    if not new_team_id:
+        return jsonify({"error": "team_id 不能为空"}), 400
 
-    account_manager.accounts.append(new_account)
-    idx = len(account_manager.accounts) - 1
-    account_manager.account_states[idx] = {
-        "jwt": None,
-        "jwt_time": 0,
-        "session": None,
-        "available": True,
-        "cooldown_until": None,
-        "cooldown_reason": ""
-    }
-    account_manager.config["accounts"] = account_manager.accounts
-    account_manager.save_config()
+    # 查找是否存在相同 team_id 的账号
+    existing_idx = None
+    for i, acc in enumerate(account_manager.accounts):
+        if acc.get("team_id") == new_team_id:
+            existing_idx = i
+            break
 
-    return jsonify({"success": True, "id": idx})
+    if existing_idx is not None:
+        # 更新已存在的账号
+        acc = account_manager.accounts[existing_idx]
+        acc["secure_c_ses"] = data.get("secure_c_ses", acc.get("secure_c_ses", ""))
+        acc["host_c_oses"] = data.get("host_c_oses", acc.get("host_c_oses", ""))
+        acc["csesidx"] = data.get("csesidx", acc.get("csesidx", ""))
+        acc["user_agent"] = data.get("user_agent", acc.get("user_agent", "Mozilla/5.0"))
+        acc["email"] = data.get("email", acc.get("email", ""))
+        acc["available"] = True
+
+        # 清除 JWT 缓存，强制重新获取
+        state = account_manager.account_states.get(existing_idx, {})
+        state["jwt"] = None
+        state["jwt_time"] = 0
+        state["session"] = None
+        state["available"] = True
+        state["cooldown_until"] = None
+        state["cooldown_reason"] = ""
+        account_manager.account_states[existing_idx] = state
+
+        # 清除账号的冷却状态
+        acc.pop("cooldown_until", None)
+        acc.pop("unavailable_reason", None)
+        acc.pop("unavailable_time", None)
+
+        account_manager.config["accounts"] = account_manager.accounts
+        account_manager.save_config()
+
+        return jsonify({"success": True, "id": existing_idx, "action": "updated"})
+    else:
+        # 新增账号
+        new_account = {
+            "team_id": new_team_id,
+            "secure_c_ses": data.get("secure_c_ses", ""),
+            "host_c_oses": data.get("host_c_oses", ""),
+            "csesidx": data.get("csesidx", ""),
+            "user_agent": data.get("user_agent", "Mozilla/5.0"),
+            "email": data.get("email", ""),
+            "available": True
+        }
+
+        account_manager.accounts.append(new_account)
+        idx = len(account_manager.accounts) - 1
+        account_manager.account_states[idx] = {
+            "jwt": None,
+            "jwt_time": 0,
+            "session": None,
+            "available": True,
+            "cooldown_until": None,
+            "cooldown_reason": ""
+        }
+        account_manager.config["accounts"] = account_manager.accounts
+        account_manager.save_config()
+
+        return jsonify({"success": True, "id": idx, "action": "created"})
 
 
 @app.route('/api/accounts', methods=['POST'])
